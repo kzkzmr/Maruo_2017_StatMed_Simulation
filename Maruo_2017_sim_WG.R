@@ -79,7 +79,8 @@ rand_parm_wg <- function(cov, sgn, wg, k, npg, th1, Ilgt, sd, th2_3, h){
   
   y <- c(y00[1:npg, 2:(tn + 1)], y00[(npg + 1):(2 * npg), 2:(tn + 1)])
   
-  bl <- c((numeric(tn) + 1) %x% y00[1:npg, 1], (numeric(tn) + 1) %x% y00[(npg + 1):(2 * npg), 1])
+  bl <- c((numeric(tn) + 1) %x% y00[1:npg, 1], (numeric(tn) + 1) %x% 
+            y00[(npg + 1):(2 * npg), 1])
   time <- c(1, 1) %x% ((1:tn) %x% (numeric(npg) + 1))
   group <- c(0, 1) %x% (numeric(npg * tn) + 1)
   id <- c(1, 1) %x% (numeric(tn) + 1) %x% (1:npg)
@@ -155,7 +156,8 @@ MMRM <- function(outcome, group, time, id, timepoint, data, covv = NULL,
       }
     }
   }
-  form <- paste("y~ as.factor(group) + as.factor(time) + as.factor(group):as.factor(time)", covform)
+  form <- paste("y~ as.factor(group) + as.factor(time) + as.factor(group):as.factor(time)", 
+                covform)
   ng <- length(unique(data$group))
   nt <- length(unique(data$time))
   nc <- sum(cct)
@@ -340,8 +342,9 @@ MMRM <- function(outcome, group, time, id, timepoint, data, covv = NULL,
   lower <- delta - SEd * tt
   upper <- delta + SEd * tt
   lsmeans <- data.frame(group = 1:ng, estimate = lsm, SE = SElsm) 
-  lsmeans_diff <- data.frame(group1 = comb[, 2], group0 = comb[, 1], estimate = delta, 
-                             SE = SEd, lower_CL = lower, upper_CL = upper, df = df, 
+  lsmeans_diff <- data.frame(group1 = comb[, 2], group0 = comb[, 1], 
+                             estimate = delta, SE = SEd, lower_CL = lower, 
+                             upper_CL = upper, df = df, 
                              tvalue = tvalue, pvalue = pvalue)
   result <- list(lsmeans = lsmeans, lsmeans_diff = lsmeans_diff)
   return(result)
@@ -406,7 +409,7 @@ MMRM_bc_0 <- function(data, cov, deltat){
 
 # Simulation conducting function
 bcmixed_sim_wg <- function(cov, sgn, wg, k, drop, npg, th1_1, th1_2, th1_3, 
-                           th2_3, sd1, sd2, sd3, Ilgt, xi2_3, h){
+                           th2_3, sd1, sd2, sd3, Ilgt, xi2_3, h, simn){
   th1 <- c(th1_1, th1_2, th1_3)
   sd <- c(sd1, sd2, sd3)
   deltat <- xi2_3 - (100 - sgn * 20)
@@ -418,7 +421,7 @@ bcmixed_sim_wg <- function(cov, sgn, wg, k, drop, npg, th1_1, th1_2, th1_3,
   res3a <- c()
   res4a <- c()
   res5a <- c()
-  for (i in 1:500){
+  for (i in 1:simn){
     dat0 <- rand_parm_wg(cov, sgn, wg, k, npg, th1, Ilgt, sd, th2_3, h)
     dat0$lny <- log(dat0$y)
     dat0$lnbl <- log(dat0$bl) 
@@ -501,7 +504,7 @@ parma <- parm[parm$cov == 1 & parm$sgn == -1,]
 cluster = makeCluster(40)
 clusterSetRNGStream(cluster, 12345)
 registerDoParallel(cluster)
-simr <- foreach (wg = parma$wg, drop = parma$dropr, th1_1 = parma$th1_1, 
+simr <- foreach (wg = parma$wg, drop = parma$drop, th1_1 = parma$th1_1, 
                  th1_2 = parma$th1_2, th1_3 = parma$th1_3, th2_3 = parma$th2_3, 
                  sd1 = parma$sd1, sd2 = parma$sd2, sd3 = parma$sd3, 
                  Ilgt = parma$Ilgt, xi2_3 = parma$xi2_3,  h = parma$h,  
@@ -510,26 +513,26 @@ simr <- foreach (wg = parma$wg, drop = parma$dropr, th1_1 = parma$th1_1,
                                "e1071", "bcmixed")) %dopar%  
   {
     bcmixed_sim_wg(1, -1, wg, 1.5, drop, 50, th1_1, th1_2, th1_3, 
-                   th2_3, sd1, sd2, sd3, Ilgt, xi2_3, h)
+                   th2_3, sd1, sd2, sd3, Ilgt, xi2_3, h, 10000)
   }
 stopCluster(cluster)
 
 proc.time()-t
 
-simr1 <- as.data.frame(simr)
-names(simr1) <- c('cov', 'sgn', 'wg', 'k', 'drop', 'npg' ,'H', 'delta_t',
-                  "lmd_e_un", "dlt_un", "SE_mod_un", "SE_rob_un", 
-                  "SE_mod_adj_un", "SE_rob_adj_un", "SD_dlt_un", "cp_mod_un", 
+simr <- as.data.frame(simr)
+names(simr) <- c('cov', 'sgn', 'wg', 'k', 'drop', 'npg' ,'H', 'delta_t',
+                  "lambda_e_un", "delta_un", "SE_mod_un", "SE_rob_un", 
+                  "SE_mod_adj_un", "SE_rob_adj_un", "SD_delta_un", "cp_mod_un", 
                   "cp_rob_un", "cp_mod_adj_un", "cp_rob_adj_un", 
                   "power_mod_un", "power_rob_un", "power_mod_adj_un", 
-                  "power_rob_adj_un", "conv_un", "lmd_e_cs", 
-                  "dlt_cs", "SE_mod_cs", "SE_rob_cs", "SE_mod_adj_cs", 
-                  "SE_rob_adj_cs", "SD_dlt_cs", "cp_mod_cs", "cp_rob_cs", 
+                  "power_rob_adj_un", "conv_un", "lambda_e_cs", 
+                  "delta_cs", "SE_mod_cs", "SE_rob_cs", "SE_mod_adj_cs", 
+                  "SE_rob_adj_cs", "SD_delta_cs", "cp_mod_cs", "cp_rob_cs", 
                   "cp_mod_adj_cs", "cp_rob_adj_cs", "power_mod_cs", 
                   "power_rob_cs", "power_mod_adj_cs", "power_rob_adj_cs", 
-                  "conv_cs", "dlt_cca", "cp_cca", "pwr_cca", "dlt_locf", 
+                  "conv_cs", "delta_cca", "cp_cca", "power_cca", "delta_locf", 
                   "cp_locf", "power_locf", "power_mmrm", "power_mmrm_l")
 
 
-write.csv(simr1,"Simulation_bcmixed_WG.csv",row.names=F)
+write.csv(simr,"Simulation_bcmixed_WG.csv",row.names=F)
 

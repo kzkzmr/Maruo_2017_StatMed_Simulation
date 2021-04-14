@@ -488,7 +488,8 @@ MMRM_bc_0 <- function(data, cov, deltat){
 }
 
 #  Simulation conducting function
-bcmixed_sim <- function(cov, lmd, drop, npg, m1, m2, m3, s1, s2, s3, Ilgt, dlt, h, xi2_3){
+bcmixed_sim <- function(cov, lmd, drop, npg, m1, m2, m3, s1, s2, s3, Ilgt, dlt, 
+                        xi2_3, h, simn){
   sgn <- sign(dlt)
   deltat <- xi2_3 - (100 - sgn * 20)
   if (h != 2) deltat <- 0
@@ -499,7 +500,7 @@ bcmixed_sim <- function(cov, lmd, drop, npg, m1, m2, m3, s1, s2, s3, Ilgt, dlt, 
   res3a <- c()
   res4a <- c()
   res5a <- c()
-  for (i in 1:1000){
+  for (i in 1:simn){
     dat0 <- rand_parm_bc_sim(lmd, npg, cov, m1, m2, m3, s1, s2, s3, Ilgt, dlt, h)
     dat0$lny <- log(dat0$y)
     dat0$lnbl <- log(dat0$bl) 
@@ -534,22 +535,25 @@ bcmixed_sim <- function(cov, lmd, drop, npg, m1, m2, m3, s1, s2, s3, Ilgt, dlt, 
                 100 * (res21$p.value < 0.05))
     }
     if (cov == 1){
-      res3 <- try(100 * c(MMRM(outcome = y, group = group, time = time, id = id, 
-                               timepoint = 3, data = dat0, covv = "bl", 
+      res3 <- try(100 * c(MMRM(outcome = y, group = group, time = time, 
+                               id = id, timepoint = 3, data = dat0, covv = "bl", 
                                cfactor = 0)$lsmeans_diff$pvalue < 0.05))
-      res4 <- try(100 * c(MMRM(outcome = lny, group = group, time = time, id = id, 
-                               timepoint = 3, data = dat0, covv = "lnbl", 
+      res4 <- try(100 * c(MMRM(outcome = lny, group = group, time = time, 
+                               id = id, timepoint = 3, data = dat0, covv = "lnbl", 
                                cfactor = 0)$lsmeans_diff$pvalue < 0.05))
       res5 <- try(100 * c(MMRM(outcome = zt, group = group, time = time, id = id, 
                                timepoint = 3, data = dat0, covv = "lblt", 
                                cfactor = 0)$lsmeans_diff$pvalue < 0.05))
     } else {
-      res3 <- try(100 * c(MMRM(outcome = y, group = group, time = time, id = id, 
-                               timepoint = 3, data = dat0)$lsmeans_diff$pvalue < 0.05))
-      res4 <- try(100 * c(MMRM(outcome = lny, group = group, time = time, id = id, 
-                               timepoint = 3, data = dat0)$lsmeans_diff$pvalue < 0.05))
-      res5 <- try(100 * c(MMRM(outcome = zt, group = group, time = time, id = id, 
-                               timepoint = 3, data = dat0)$lsmeans_diff$pvalue < 0.05))
+      res3 <- try(100 * c(MMRM(outcome = y, group = group, time = time, 
+                               id = id, timepoint = 3, 
+                               data = dat0)$lsmeans_diff$pvalue < 0.05))
+      res4 <- try(100 * c(MMRM(outcome = lny, group = group, time = time, 
+                               id = id, timepoint = 3, 
+                               data = dat0)$lsmeans_diff$pvalue < 0.05))
+      res5 <- try(100 * c(MMRM(outcome = zt, group = group, time = time, 
+                               id = id, timepoint = 3, 
+                               data = dat0)$lsmeans_diff$pvalue < 0.05))
     }
     
     if (class(res2) == "try-error") res2 <- NA
@@ -596,26 +600,27 @@ simr <- foreach (lmd = parma$lmd, drop = parma$drop,
                  .packages = c("nlme", "Matrix", "MASS",
                                "e1071", "bcmixed")) %dopar%  
   {
-    bcmixed_sim(1, lmd, drop, 50, m1, m2, m3, s1, s2, s3, Ilgt, dlt, h, xi2_3)
+    bcmixed_sim(1, lmd, drop, 50, m1, m2, m3, s1, s2, s3, 
+                Ilgt, dlt, xi2_3, h, 10000)
   }
 stopCluster(cluster)
 proc.time() - t
 
 simr <- as.data.frame(simr)
 colnames(simr) <- c("cov", "sgn", "lmd", "drop", "npg", "H", "delta_t", 
-                    "lmd_e_un", "dlt_un", "SE_mod_un", "SE_rob_un", 
-                    "SE_mod_adj_un", "SE_rob_adj_un", "SD_dlt_un", "cp_mod_un", 
+                    "lmd_e_un", "delta_un", "SE_mod_un", "SE_rob_un", 
+                    "SE_mod_adj_un", "SE_rob_adj_un", "SD_delta_un", "cp_mod_un", 
                     "cp_rob_un", "cp_mod_adj_un", "cp_rob_adj_un", 
                     "power_mod_un", "power_rob_un", "power_mod_adj_un", 
                     "power_rob_adj_un", "conv_un", "lmd_e_cs", 
-                    "dlt_cs", "SE_mod_cs", "SE_rob_cs", "SE_mod_adj_cs", 
-                    "SE_rob_adj_cs", "SD_dlt_cs", "cp_mod_cs", "cp_rob_cs", 
+                    "delta_cs", "SE_mod_cs", "SE_rob_cs", "SE_mod_adj_cs", 
+                    "SE_rob_adj_cs", "SD_delta_cs", "cp_mod_cs", "cp_rob_cs", 
                     "cp_mod_adj_cs", "cp_rob_adj_cs", "power_mod_cs", 
                     "power_rob_cs", "power_mod_adj_cs", "power_rob_adj_cs", 
-                    "conv_cs", "dlt_cca", "cp_cca", "pwr_cca", "dlt_locf", 
+                    "conv_cs", "delta_cca", "cp_cca", "power_cca", "delta_locf", 
                     "cp_locf", "power_locf", "power_mmrm", "power_mmrm_l", 
                     "power_mmrm_t")
 
 
-write.csv(simr1,"Simulation_bcmixed_PN.csv",row.names=F)
+write.csv(simr,"Simulation_bcmixed_PN.csv",row.names=F)
 
