@@ -13,7 +13,11 @@ Maruo_2017_sim_WG.R: Simulation program of simulations settings for the Weibull 
 Simulation setting variables
 
 cov = 0: no covariate, 1: with covariate (baseline); cov = 1 for all simulations.
+
 sgn = -1: sign of true treatment effect is minus, sgn = 1: plus; sgn = 1 for all simulations. 
+
 lambda (only for PN) = -0.5, 0, or 0.5
+
 wg (only for WG) = 0: Weibull distribution, 1: gamma distribution
+
 H = 0: null hypothesis for all visit, 1: null hypothes only for last visit, 2: alternative hypothesis
